@@ -372,7 +372,20 @@ async function apiGet(endpoint) {
     credentials: "include",
     headers,
   });
-  if (!resp.ok) throw new ApiError(resp.status, endpoint);
+  if (!resp.ok) {
+    // Twitter-style auth failures often arrive as HTTP 400 + code 215.
+    let status = resp.status;
+    try {
+      const body = await resp.json();
+      const code = body?.errors?.[0]?.code;
+      if (code === 215 || /bad authentication/i.test(body?.errors?.[0]?.message || "")) {
+        status = 401;
+      }
+    } catch {
+      // ignore parse failures; throw with original status
+    }
+    throw new ApiError(status, endpoint);
+  }
   try {
     return await resp.json();
   } catch {
