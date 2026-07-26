@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "X Usage Badge",
+  "version": "0.1.0",
+  "description": "Unofficial X Developer Console usage badge: credit balance, cycle spend vs limit, and post-read meters.",
+  "homepage_url": "https://github.com/zealot-network/x-usage-badge",
+  "minimum_chrome_version": "111",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "permissions": [
+    "storage",
+    "cookies",
+    "alarms"
+  ],
+  "host_permissions": [
+    "https://console.x.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "X Usage Badge",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png"
+    }
+  }
+}
