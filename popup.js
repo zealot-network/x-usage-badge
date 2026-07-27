@@ -24,6 +24,15 @@ const DEFAULT_STATE = {
     status: null,
   },
   meters: [],
+  analytics: {
+    fromDate: null,
+    toDate: null,
+    totalCostUsd: null,
+    totalPosts: null,
+    totalUsers: null,
+    totalRequests: null,
+    events: [],
+  },
   billingCycleStart: null,
   billingCycleEnd: null,
   lastUpdated: null,
@@ -180,8 +189,15 @@ function hasData(state) {
   return !!(
     state.credits?.balanceUsd != null ||
     state.spend?.usedUsd != null ||
-    (state.meters || []).some((m) => m?.used != null || m?.utilization != null)
+    (state.meters || []).some((m) => m?.used != null || m?.utilization != null) ||
+    (state.analytics?.events || []).some((e) => e?.used > 0)
   );
+}
+
+function formatUsd(n) {
+  if (n == null || !Number.isFinite(n)) return "—";
+  if (n > 0 && n < 0.01) return "<$0.01";
+  return `$${n.toFixed(2)}`;
 }
 
 function render(state) {
@@ -337,15 +353,50 @@ function render(state) {
     if (spendHorizon) spendHorizon.style.display = "none";
   }
 
-  // Usage meters
+  // Usage analytics (summary + cap meters + event breakdown)
   const metersSlot = $("meters-slot");
   const usageHeading = $("usage-heading");
   const usageHorizon = $("usage-horizon");
+  const summaryEl = $("analytics-summary");
+  const eventsEl = $("events-list");
   metersSlot.innerHTML = "";
+  if (eventsEl) eventsEl.innerHTML = "";
+
+  const analytics = state.analytics || {};
   const meters = state.meters || [];
-  if (!showPrompt && meters.length > 0) {
+  const events = analytics.events || [];
+  const hasAnalytics =
+    analytics.totalCostUsd != null ||
+    analytics.totalPosts != null ||
+    analytics.totalUsers != null ||
+    analytics.totalRequests != null ||
+    events.some((e) => e?.used > 0) ||
+    meters.length > 0;
+
+  if (!showPrompt && hasAnalytics) {
     usageHeading.style.display = "";
     if (usageHorizon) usageHorizon.style.display = "";
+
+    if (summaryEl) {
+      const stats = [
+        { label: "Cost", value: formatUsd(analytics.totalCostUsd) },
+        { label: "Posts", value: formatCompact(analytics.totalPosts) },
+        { label: "Users", value: formatCompact(analytics.totalUsers) },
+        { label: "Requests", value: formatCompact(analytics.totalRequests) },
+      ];
+      summaryEl.innerHTML = stats
+        .map(
+          (s) =>
+            `<div class="stat"><div class="stat-label">${s.label}</div>` +
+            `<div class="stat-value">${s.value}</div></div>`
+        )
+        .join("");
+      summaryEl.style.display = "";
+      summaryEl.title = analytics.fromDate && analytics.toDate
+        ? `Last 30 days · ${analytics.fromDate} → ${analytics.toDate}`
+        : "Last 30 days";
+    }
+
     for (const m of meters) {
       const pct = m.utilization;
       let valueText = formatPct(pct);
@@ -365,12 +416,52 @@ function render(state) {
         })
       );
     }
-  } else if (!showPrompt && hasData(state)) {
-    usageHeading.style.display = "none";
-    if (usageHorizon) usageHorizon.style.display = "none";
+
+    if (eventsEl) {
+      const active = events.filter((e) => (e.used || 0) > 0);
+      const zeroCount = events.length - active.length;
+      if (active.length > 0) {
+        eventsEl.innerHTML = "";
+        const title = document.createElement("div");
+        title.className = "events-list-title";
+        title.textContent = "By event type";
+        eventsEl.appendChild(title);
+
+        for (const e of active) {
+          const row = document.createElement("div");
+          row.className = "event-row";
+          const name = document.createElement("span");
+          name.className = "event-name";
+          name.textContent = e.label || e.key;
+          const meta = document.createElement("span");
+          meta.className = "event-meta";
+          const count = document.createElement("strong");
+          count.textContent = formatCompact(e.used);
+          meta.appendChild(count);
+          if (e.costUsd != null && e.costUsd > 0) {
+            meta.appendChild(document.createTextNode(` · ${formatUsd(e.costUsd)}`));
+          }
+          row.appendChild(name);
+          row.appendChild(meta);
+          eventsEl.appendChild(row);
+        }
+
+        if (zeroCount > 0) {
+          const zero = document.createElement("div");
+          zero.className = "events-zero";
+          zero.textContent = `${zeroCount} other types · no usage`;
+          eventsEl.appendChild(zero);
+        }
+        eventsEl.style.display = "";
+      } else {
+        eventsEl.style.display = "none";
+      }
+    }
   } else {
     usageHeading.style.display = "none";
     if (usageHorizon) usageHorizon.style.display = "none";
+    if (summaryEl) summaryEl.style.display = "none";
+    if (eventsEl) eventsEl.style.display = "none";
   }
 
   $("meta-label").textContent = formatLastUpdated(state.lastUpdated);
@@ -388,6 +479,11 @@ function normalizeState(state) {
       ...((state && state.autoRecharge) || {}),
     },
     meters: (state && state.meters) || [],
+    analytics: {
+      ...DEFAULT_STATE.analytics,
+      ...((state && state.analytics) || {}),
+      events: (state && state.analytics && state.analytics.events) || [],
+    },
   };
 }
 

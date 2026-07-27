@@ -60,9 +60,11 @@
       background: var(--bg);
       min-width: 300px;
       max-width: 300px;
+      max-height: 560px;
       padding: 16px;
       -webkit-font-smoothing: antialiased;
-      overflow: hidden;
+      overflow-x: hidden;
+      overflow-y: auto;
     }
 
     /* Ambient ignition wash — orange → steel at ~8% on light ground */
@@ -471,6 +473,97 @@
       background: linear-gradient(to right, transparent, rgba(10,10,10,0.35), transparent);
       opacity: 0.5;
     }
+
+    .analytics-summary {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px 10px;
+      margin: 0 0 12px;
+      padding: 10px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+    }
+
+    .analytics-summary .stat {
+      min-width: 0;
+    }
+
+    .analytics-summary .stat-label {
+      font-family: var(--font-mono);
+      font-size: 8px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+
+    .analytics-summary .stat-value {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      letter-spacing: 0.01em;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .events-list {
+      margin-top: 4px;
+      padding: 10px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+    }
+
+    .events-list-title {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .event-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+      padding: 3px 0;
+    }
+
+    .event-row + .event-row {
+      border-top: 1px solid rgba(10, 10, 10, 0.06);
+    }
+
+    .event-name {
+      font-size: 11px;
+      color: var(--text);
+      letter-spacing: -0.01em;
+      min-width: 0;
+    }
+
+    .event-meta {
+      flex: 0 0 auto;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.02em;
+      color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .event-meta strong {
+      color: var(--text);
+      font-weight: 400;
+    }
+
+    .events-zero {
+      margin-top: 6px;
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
   </style>
 </head>
 <body>
@@ -528,7 +621,9 @@
   <div class="horizon" id="usage-horizon" style="display:none;"></div>
 
   <div class="mono-tag" id="usage-heading" style="display:none;">[ Usage ]</div>
+  <div class="analytics-summary" id="analytics-summary" style="display:none;"></div>
   <div id="meters-slot"></div>
+  <div class="events-list" id="events-list" style="display:none;"></div>
 
   <div class="footer">
     <span class="meta" id="meta-label">Waiting for data…</span>

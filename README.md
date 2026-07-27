@@ -17,9 +17,10 @@ The badge shows how close you are to trouble — typically billing-cycle spend v
 - Auto-recharge ON / OFF
 - Over-limit state flagged loudly
 
-**Usage meters**
-- Post reads vs monthly cap (pay-per-use)
-- User reads vs monthly cap (when present)
+**Usage analytics**
+- 30-day summary: total cost, posts, users, requests
+- Post / user reads vs monthly cap (badge meters)
+- Event-type breakdown (Posts, Users, DMs, Likes, Follows, …) with estimated cost
 
 **Package / cycle**
 - Plan pill (e.g. Pay Per Use)
@@ -45,7 +46,9 @@ The extension reads the same cookie-authenticated console APIs that power the De
 - `GET /api/me` — account + billing cycle
 - `GET /api/accounts/{id}/credits` — balance + spend cap + auto-recharge threshold
 - `GET /api/accounts/{id}/spend` — cycle spend totals
-- `GET /api/accounts/{id}/usage?interval=current` — post/user read meters
+- `GET /api/accounts/{id}/usage?interval=30days&groupBy=eventType` — event-type analytics
+- `GET /api/accounts/{id}/usage?interval=30days&groupBy=requestType` — request totals
+- `GET /api/credits/pricing` — per-event unit prices for cost estimates
 
 - `background.js` — service worker, single source of truth. Polls every 3 minutes plus on-demand.
 - `popup.html` / `popup.js` — the UI. Light xAI-inspired chrome (off-white, not the black Claude/Cursor popups).
@@ -70,7 +73,8 @@ Popup UI follows [xAI](https://x.ai) brand standards (All Brand Standards DB) in
 | Background | `#E1E4E8` | Popup page (xAI off-white) |
 | Surface | `#FFFFFF` | Elevated cards |
 | Text | `#0A0A0A` | Primary copy |
-| Accent | `#FF6308` | Title, mono labels, icon ring (xAI orange) |
+| Accent | `#FF6308` | Title, mono labels (xAI orange) |
+| Icon disc / X / ring | `#E1E4E8` / `#0A0A0A` / `#22c55e` | Off-white disc, sharp black X, green ring |
 | Severity bars | `#22c55e` / `#f59e0b` / `#ef4444` | Progress fills |
 | Live `%` badge | `#15803D` / `#B45309` / `#B91C1C` | Toolbar overlay (Claude/Cursor scheme) |
 

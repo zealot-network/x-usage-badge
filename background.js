@@ -7,6 +7,9 @@
 //   GET /api/accounts/{id}/credits
 //   GET /api/accounts/{id}/spend
 //   GET /api/accounts/{id}/usage?interval=current
+//   GET /api/accounts/{id}/usage?interval=30days&groupBy=eventType
+//   GET /api/accounts/{id}/usage?interval=30days&groupBy=requestType
+//   GET /api/credits/pricing
 //
 // Auth is the existing X session cookies on console.x.com (auth_token + ct0).
 // Requests send credentials: "include" and x-csrf-token from the ct0 cookie.
@@ -39,7 +42,16 @@ const DEFAULT_STATE = {
     thresholdUsd: null,
     status: null, // "on" | "off" | null
   },
-  meters: [], // [{ key, label, used, limit, utilization }]
+  meters: [], // [{ key, label, used, limit, utilization }] — cap meters for badge
+  analytics: {
+    fromDate: null,
+    toDate: null,
+    totalCostUsd: null,
+    totalPosts: null,
+    totalUsers: null,
+    totalRequests: null,
+    events: [], // [{ key, label, used, costUsd, percentOfCap }]
+  },
   billingCycleStart: null,
   billingCycleEnd: null,
   lastUpdated: null,
@@ -103,11 +115,11 @@ const COLOR_RED = "#B91C1C";
 const COLOR_GREY = "#3F3F46";
 const BADGE_TEXT = "#FFFFFF";
 
-// Icon brand accents — xAI orange ring + filled X mark on near-black disc.
-const ICON_ORANGE = "#FF6308";
-const ICON_MARK = "#FFFFFF";
-const ICON_BG = "#0A0A0A";
-const ICON_TRACK = "#2A2A2A";
+// Icon: off-white disc, sharp black X, green progress ring.
+const ICON_MARK = "#0A0A0A";
+const ICON_BG = "#E1E4E8";
+const ICON_TRACK = "rgba(10, 10, 10, 0.18)";
+const ICON_RING = "#22c55e";
 
 function computeBadge(state) {
   const candidates = [];
@@ -204,7 +216,7 @@ function paintIcon(ctx, size, fillPct) {
   const cy = size / 2;
   ctx.clearRect(0, 0, size, size);
 
-  // Soft near-black disc so the mark reads on light & dark toolbars.
+  // Off-white disc — matches popup ground so the orange X reads on Chrome toolbars.
   ctx.beginPath();
   ctx.arc(cx, cy, size * 0.48, 0, Math.PI * 2);
   ctx.fillStyle = ICON_BG;
@@ -226,22 +238,62 @@ function paintIcon(ctx, size, fillPct) {
     const sweep = Math.max((pct / 100) * Math.PI * 2, 0.14);
     ctx.beginPath();
     ctx.arc(cx, cy, ringR, start, start + sweep);
-    ctx.strokeStyle = ICON_ORANGE;
+    ctx.strokeStyle = ICON_RING;
     ctx.lineWidth = ringW;
     ctx.lineCap = "round";
     ctx.stroke();
   }
 
-  // Filled X glyph (consumer X wordmark style), inset inside the ring.
-  const arm = size * 0.145;
-  const thick = Math.max(1.6, size * 0.07);
+  // Brand X glyph — slightly smaller, corners gently filleted so it’s not a pixel-perfect logo.
+  const markScale = size * 0.0225;
   ctx.save();
   ctx.translate(cx, cy);
-  ctx.rotate(Math.PI / 4);
+  ctx.scale(markScale, markScale);
+  ctx.translate(-12, -12);
   ctx.fillStyle = ICON_MARK;
-  ctx.fillRect(-arm, -thick / 2, arm * 2, thick);
-  ctx.fillRect(-thick / 2, -arm, thick, arm * 2);
+  ctx.fill(buildRoundedXMark(0.95), "evenodd");
   ctx.restore();
+}
+
+/** Filleted brand-X path in 24×24 space (outer + cutout). */
+function buildRoundedXMark(radius) {
+  const OUTER = [
+    [18.244, 2.25], [21.552, 2.25], [14.325, 10.51], [22.827, 21.75],
+    [16.17, 21.75], [10.956, 14.933], [4.99, 21.75], [1.68, 21.75],
+    [9.41, 12.915], [1.254, 2.25], [8.08, 2.25], [12.793, 8.481],
+  ];
+  const INNER = [
+    [17.083, 19.77], [18.916, 19.77], [7.084, 4.126], [5.117, 4.126],
+  ];
+  const path = new Path2D();
+  addFilletedPolygon(path, OUTER, radius);
+  addFilletedPolygon(path, INNER, radius * 0.75);
+  return path;
+}
+
+function addFilletedPolygon(path, pts, radius) {
+  const n = pts.length;
+  for (let i = 0; i < n; i++) {
+    const prev = pts[(i - 1 + n) % n];
+    const cur = pts[i];
+    const nxt = pts[(i + 1) % n];
+    const v1x = prev[0] - cur[0];
+    const v1y = prev[1] - cur[1];
+    const v2x = nxt[0] - cur[0];
+    const v2y = nxt[1] - cur[1];
+    const l1 = Math.hypot(v1x, v1y) || 1;
+    const l2 = Math.hypot(v2x, v2y) || 1;
+    const d1 = Math.min(radius, l1 * 0.4);
+    const d2 = Math.min(radius, l2 * 0.4);
+    const p1x = cur[0] + (v1x / l1) * d1;
+    const p1y = cur[1] + (v1y / l1) * d1;
+    const p2x = cur[0] + (v2x / l2) * d2;
+    const p2y = cur[1] + (v2y / l2) * d2;
+    if (i === 0) path.moveTo(p1x, p1y);
+    else path.lineTo(p1x, p1y);
+    path.quadraticCurveTo(cur[0], cur[1], p2x, p2y);
+  }
+  path.closePath();
 }
 
 function drawIconBitmap(size, fillPct) {
@@ -320,6 +372,15 @@ function mergeState(partial) {
           ...DEFAULT_STATE.autoRecharge,
           ...(prev.autoRecharge || {}),
           ...(partial.autoRecharge || {}),
+        },
+        analytics: {
+          ...DEFAULT_STATE.analytics,
+          ...(prev.analytics || {}),
+          ...(partial.analytics || {}),
+          events:
+            partial.analytics?.events !== undefined
+              ? partial.analytics.events
+              : (prev.analytics && prev.analytics.events) || [],
         },
         meters: partial.meters !== undefined ? partial.meters : prev.meters || [],
       };
@@ -415,63 +476,94 @@ async function patchThrottle(partial) {
 
 // ─── Parse console payloads ─────────────────────────────────────────────────
 
-function sumUsageCounts(metric) {
-  const usages = metric?.usages;
-  if (!Array.isArray(usages)) return null;
+const EVENT_LABELS = {
+  Post: "Posts",
+  User: "Users",
+  DirectMessage: "DMs",
+  List: "Lists",
+  Community: "Communities",
+  Space: "Spaces",
+  ProfileUpdate: "Profile updates",
+  Like: "Likes",
+  Follow: "Follows",
+  Mute: "Mutes",
+  Block: "Blocks",
+  OwnedRead: "Owned reads",
+  News: "News",
+};
+
+function eventLabel(key) {
+  return EVENT_LABELS[key] || key;
+}
+
+function parseEventGroups(groupedPayload, pricing) {
+  const products = groupedPayload?.usage || {};
+  const priceMap = pricing?.eventTypePricing || {};
+  const events = [];
+  let sharedCap = null;
+
+  for (const productId of Object.keys(products)) {
+    const product = products[productId] || {};
+    const groups = product.groups || {};
+    const cap = numOrNull(product.cap);
+    if (cap != null && cap > 0) sharedCap = cap;
+
+    for (const [key, g] of Object.entries(groups)) {
+      const used = numOrNull(g?.usage) ?? 0;
+      const unitPrice = numOrNull(priceMap[key]);
+      const costUsd = unitPrice != null ? used * unitPrice : null;
+      // API percentOfCap is already in percent units (0.148 → 0.148%).
+      let pct = numOrNull(g?.percentOfCap);
+      if (pct == null) pct = utilization(used, cap);
+      events.push({
+        key,
+        label: eventLabel(key),
+        used,
+        costUsd,
+        percentOfCap: pct,
+        limit: cap != null && cap > 0 ? cap : null,
+      });
+    }
+  }
+
+  events.sort((a, b) => (b.used || 0) - (a.used || 0));
+  return { events, sharedCap };
+}
+
+function parseUsageMetersFromEvents(events) {
+  const meters = [];
+  for (const key of ["Post", "User"]) {
+    const ev = events.find((e) => e.key === key);
+    if (!ev) continue;
+    meters.push({
+      key: key === "Post" ? "posts" : "users",
+      label: key === "Post" ? "Post reads" : "User reads",
+      used: ev.used,
+      limit: ev.limit,
+      utilization: utilization(ev.used, ev.limit),
+    });
+  }
+  return meters;
+}
+
+function sumRequestGroups(groupedPayload) {
+  const products = groupedPayload?.usage || {};
   let total = 0;
   let any = false;
-  for (const u of usages) {
-    const n = numOrNull(u?.count);
-    if (n != null) {
-      total += n;
-      any = true;
+  for (const productId of Object.keys(products)) {
+    const groups = products[productId]?.groups || {};
+    for (const g of Object.values(groups)) {
+      const n = numOrNull(g?.usage);
+      if (n != null) {
+        total += n;
+        any = true;
+      }
     }
   }
   return any ? total : null;
 }
 
-function parseUsageMeters(usagePayload) {
-  const meters = [];
-  const products = usagePayload?.usage || {};
-  for (const productId of Object.keys(products)) {
-    const product = products[productId] || {};
-    const tweets = product.tweets || product.posts;
-    if (tweets) {
-      const used =
-        numOrNull(tweets.projected) ??
-        sumUsageCounts(tweets);
-      const limit = numOrNull(tweets.cap);
-      const util = utilization(used, limit);
-      if (used != null || limit != null) {
-        meters.push({
-          key: "posts",
-          label: "Post reads",
-          used,
-          limit: limit && limit > 0 ? limit : null,
-          utilization: util,
-        });
-      }
-    }
-    const users = product.users;
-    if (users) {
-      const used = numOrNull(users.projected) ?? sumUsageCounts(users);
-      const limit = numOrNull(users.cap);
-      const util = utilization(used, limit);
-      if (used != null || limit != null) {
-        meters.push({
-          key: "users",
-          label: "User reads",
-          used,
-          limit: limit && limit > 0 ? limit : null,
-          utilization: util,
-        });
-      }
-    }
-  }
-  return meters;
-}
-
-function parseConsoleData({ me, credits, spend, usage }) {
+function parseConsoleData({ me, credits, spend, eventUsage, requestUsage, pricing }) {
   const account = me?.account || {};
   const billing = account.billingRange?.current || {};
   const cycleStart = toEpoch(billing.start);
@@ -502,6 +594,12 @@ function parseConsoleData({ me, credits, spend, usage }) {
     packageName = "Pay Per Use";
   }
 
+  const { events } = parseEventGroups(eventUsage, pricing);
+  const meters = parseUsageMetersFromEvents(events);
+  const postEv = events.find((e) => e.key === "Post");
+  const userEv = events.find((e) => e.key === "User");
+  const totalRequests = sumRequestGroups(requestUsage);
+
   return {
     account: {
       id: account.id || null,
@@ -525,7 +623,16 @@ function parseConsoleData({ me, credits, spend, usage }) {
       thresholdUsd,
       status: thresholdUsd == null ? null : autoOn ? "on" : "off",
     },
-    meters: parseUsageMeters(usage),
+    meters,
+    analytics: {
+      fromDate: eventUsage?.fromDate || null,
+      toDate: eventUsage?.toDate || null,
+      totalCostUsd: usedUsd,
+      totalPosts: postEv?.used ?? null,
+      totalUsers: userEv?.used ?? null,
+      totalRequests,
+      events,
+    },
     billingCycleStart: cycleStart,
     billingCycleEnd: cycleEnd,
   };
@@ -535,7 +642,8 @@ function hasUsableData(parsed) {
   return !!(
     parsed.credits?.balanceUsd != null ||
     parsed.spend?.usedUsd != null ||
-    (parsed.meters || []).some((m) => m?.utilization != null || m?.used != null)
+    (parsed.meters || []).some((m) => m?.utilization != null || m?.used != null) ||
+    (parsed.analytics?.events || []).some((e) => e?.used > 0)
   );
 }
 
@@ -579,14 +687,26 @@ async function doFetchUsage(force = false) {
       return;
     }
 
-    const [credits, spend, usage] = await Promise.all([
+    const [credits, spend, eventUsage, requestUsage, pricing] = await Promise.all([
       apiGet(`/api/accounts/${accountId}/credits`),
       apiGet(`/api/accounts/${accountId}/spend`).catch((e) => {
         dbg("spend failed:", e);
         return null;
       }),
-      apiGet(`/api/accounts/${accountId}/usage?interval=current`).catch((e) => {
-        dbg("usage failed:", e);
+      apiGet(
+        `/api/accounts/${accountId}/usage?interval=30days&groupBy=eventType`
+      ).catch((e) => {
+        dbg("event usage failed:", e);
+        return null;
+      }),
+      apiGet(
+        `/api/accounts/${accountId}/usage?interval=30days&groupBy=requestType`
+      ).catch((e) => {
+        dbg("request usage failed:", e);
+        return null;
+      }),
+      apiGet(`/api/credits/pricing`).catch((e) => {
+        dbg("pricing failed:", e);
         return null;
       }),
     ]);
@@ -601,9 +721,16 @@ async function doFetchUsage(force = false) {
       dbg("projects failed:", e);
     }
 
-    dbg("me/credits/spend/usage:", { me, credits, spend, usage });
+    dbg("me/credits/spend/events:", { me, credits, spend, eventUsage, requestUsage });
 
-    const parsed = parseConsoleData({ me, credits, spend, usage });
+    const parsed = parseConsoleData({
+      me,
+      credits,
+      spend,
+      eventUsage,
+      requestUsage,
+      pricing,
+    });
     if (packageName) parsed.packageName = packageName;
 
     if (!hasUsableData(parsed)) {
@@ -682,6 +809,11 @@ chrome.runtime.onInstalled.addListener(async (details) => {
         autoRecharge: {
           ...DEFAULT_STATE.autoRecharge,
           ...((usageState && usageState.autoRecharge) || {}),
+        },
+        analytics: {
+          ...DEFAULT_STATE.analytics,
+          ...((usageState && usageState.analytics) || {}),
+          events: (usageState && usageState.analytics && usageState.analytics.events) || [],
         },
         meters: (usageState && usageState.meters) || [],
       },
