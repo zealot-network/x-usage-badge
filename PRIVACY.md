@@ -1,12 +1,12 @@
-# Privacy Policy — X Usage Badge
+# Privacy Policy — X API Usage Tracker
 
-**Last updated:** July 26, 2026
+**Last updated:** November 13, 2026
 
-X Usage Badge (“the extension”) is an unofficial, open-source Chrome extension. It is not affiliated with, endorsed by, or sponsored by X Corp, Twitter, or xAI.
+X API Usage Tracker (“the extension”, formerly X Usage Badge) is an unofficial, open-source Chrome extension. It is not affiliated with, endorsed by, or sponsored by X Corp, Twitter, or xAI.
 
 ## What the extension does
 
-The extension shows your X Developer Console usage in the Chrome toolbar and popup: prepaid credit balance, billing-cycle spend vs spend cap, auto-recharge status, post/user read meters, package tier, and billing-cycle reset timing.
+The extension shows your X Developer Console usage in the Chrome toolbar and popup: prepaid credit balance, billing-cycle spend vs spend cap, auto-recharge status, post-read meter, package tier, and billing-cycle reset timing.
 
 ## Data the extension accesses
 

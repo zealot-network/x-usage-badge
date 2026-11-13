@@ -194,6 +194,11 @@ function hasData(state) {
   );
 }
 
+// Signed dollars: prepaid balance can dip below zero when usage overdraws it.
+function formatBalance(n) {
+  return `${n < 0 ? "-" : ""}$${Math.abs(n).toFixed(2)}`;
+}
+
 function formatUsd(n) {
   if (n == null || !Number.isFinite(n)) return "—";
   if (n > 0 && n < 0.01) return "<$0.01";
@@ -261,7 +266,7 @@ function render(state) {
       pill.textContent = "OK";
       pill.classList.add("pill-on");
     }
-    let html = `<strong>$${paid.toFixed(2)}</strong> prepaid`;
+    let html = `<strong>${formatBalance(paid)}</strong> prepaid`;
     if (free > 0) {
       html += `<div class="extra-sub">$${free.toFixed(2)} free credits`;
       if (credits.freeExpiresAt) {
@@ -379,7 +384,7 @@ function render(state) {
 
     if (summaryEl) {
       const stats = [
-        { label: "Cost", value: formatUsd(analytics.totalCostUsd) },
+        { label: "Cycle cost", value: formatUsd(analytics.totalCostUsd) },
         { label: "Posts", value: formatCompact(analytics.totalPosts) },
         { label: "Users", value: formatCompact(analytics.totalUsers) },
         { label: "Requests", value: formatCompact(analytics.totalRequests) },
@@ -393,8 +398,8 @@ function render(state) {
         .join("");
       summaryEl.style.display = "";
       summaryEl.title = analytics.fromDate && analytics.toDate
-        ? `Last 30 days · ${analytics.fromDate} → ${analytics.toDate}`
-        : "Last 30 days";
+        ? `Counts: last 30 days · ${analytics.fromDate} → ${analytics.toDate}. Cost: current billing cycle.`
+        : "Counts: last 30 days. Cost: current billing cycle.";
     }
 
     for (const m of meters) {

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "X Usage Badge",
-  "version": "0.1.0",
-  "description": "Unofficial X Developer Console usage badge: credit balance, cycle spend vs limit, and post-read meters.",
+  "name": "X API Usage Tracker",
+  "version": "0.2.0",
+  "description": "Unofficial X API usage tracker: a toolbar badge for credit balance, cycle spend vs limit, and post reads vs cap.",
   "homepage_url": "https://github.com/zealot-network/x-usage-badge",
   "minimum_chrome_version": "111",
   "icons": {
@@ -24,7 +24,7 @@
     "type": "module"
   },
   "action": {
-    "default_title": "X Usage Badge",
+    "default_title": "X API Usage Tracker",
     "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon16.png",

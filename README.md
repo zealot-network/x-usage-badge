@@ -1,6 +1,6 @@
-# X Usage Badge
+# X API Usage Tracker
 
-A Chrome extension that puts your X Developer Console usage in your browser toolbar.
+Formerly **X Usage Badge**. A Chrome extension that puts your X Developer Console usage in your browser toolbar.
 
 > **Unofficial.** This is an independent open-source project. It is not affiliated with, endorsed by, or sponsored by X Corp, Twitter, or xAI. "X" is a trademark of X Corp., used here only to describe what the extension does.
 
@@ -18,8 +18,8 @@ The badge shows how close you are to trouble — typically billing-cycle spend v
 - Over-limit state flagged loudly
 
 **Usage analytics**
-- 30-day summary: total cost, posts, users, requests
-- Post / user reads vs monthly cap (badge meters)
+- Summary: cycle cost, plus 30-day posts, users, requests
+- Post reads vs the billing-cycle cap (badge meter)
 - Event-type breakdown (Posts, Users, DMs, Likes, Follows, …) with estimated cost
 
 **Package / cycle**

@@ -15,7 +15,7 @@
 // Requests send credentials: "include" and x-csrf-token from the ct0 cookie.
 
 const DEBUG = false;
-const dbg = (...args) => { if (DEBUG) console.log("[X Usage Badge]", ...args); };
+const dbg = (...args) => { if (DEBUG) console.log("[X API Usage Tracker]", ...args); };
 
 const CONSOLE_ORIGIN = "https://console.x.com";
 
@@ -139,14 +139,14 @@ function computeBadge(state) {
       return {
         text: "!",
         color: COLOR_GREY,
-        title: `X Usage Badge — ${state.lastError}`,
+        title: `X API Usage Tracker — ${state.lastError}`,
         fillPct: 0,
       };
     }
     return {
       text: "",
       color: COLOR_GREY,
-      title: "X Usage Badge — no data yet",
+      title: "X API Usage Tracker — no data yet",
       fillPct: 0,
     };
   }
@@ -165,7 +165,8 @@ function computeBadge(state) {
   if (state.packageName) parts.push(state.packageName);
   if (state.account?.name) parts.push(state.account.name);
   if (balance != null) {
-    parts.push(`Credits: $${balance.toFixed(2)}`);
+    // Prepaid balance can dip below zero when paid usage overdraws it.
+    parts.push(`Credits: ${balance < 0 ? "-" : ""}$${Math.abs(balance).toFixed(2)}`);
   }
   if (state.spend?.usedUsd != null && state.spend?.limitUsd != null) {
     const upct =
@@ -490,10 +491,21 @@ const EVENT_LABELS = {
   Block: "Blocks",
   OwnedRead: "Owned reads",
   News: "News",
+  Note: "Notes",
+  Bookmark: "Bookmarks",
+  Trend: "Trends",
 };
 
+// X keeps adding billable types. Unknown keys get a readable label
+// ("PostCreateWithUrl" → "Post create with url") instead of the raw key.
 function eventLabel(key) {
-  return EVENT_LABELS[key] || key;
+  if (EVENT_LABELS[key]) return EVENT_LABELS[key];
+  const words = String(key)
+    .replace(/[._-]+/g, " ")
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .trim()
+    .toLowerCase();
+  return words ? words.charAt(0).toUpperCase() + words.slice(1) : String(key);
 }
 
 function parseEventGroups(groupedPayload, pricing) {
@@ -531,13 +543,14 @@ function parseEventGroups(groupedPayload, pricing) {
 }
 
 function parseUsageMetersFromEvents(events) {
+  // The pay-per-use cap is on Post reads only, so Posts is the one capped
+  // meter. Other event types are counted in the breakdown, not against the cap.
   const meters = [];
-  for (const key of ["Post", "User"]) {
-    const ev = events.find((e) => e.key === key);
-    if (!ev) continue;
+  const ev = events.find((e) => e.key === "Post");
+  if (ev) {
     meters.push({
-      key: key === "Post" ? "posts" : "users",
-      label: key === "Post" ? "Post reads" : "User reads",
+      key: "posts",
+      label: "Post reads",
       used: ev.used,
       limit: ev.limit,
       utilization: utilization(ev.used, ev.limit),
@@ -751,7 +764,7 @@ async function doFetchUsage(force = false) {
       errorCode: null,
     });
   } catch (err) {
-    console.error("[X Usage Badge] fetch error:", err);
+    console.error("[X API Usage Tracker] fetch error:", err);
     let errorCode = "unknown";
     let lastError = err.message || "Failed to fetch usage";
     if (err instanceof ApiError) {
