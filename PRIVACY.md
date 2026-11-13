@@ -26,6 +26,15 @@ To fulfill that single purpose, the extension:
 
 Network requests go only to `https://console.x.com/*` so the extension can read your usage from the Developer Console while you are logged in. X’s own privacy practices apply to data X processes on their servers.
 
+## Limited use
+
+The extension’s use of the data it reads from the X Developer Console complies with the Chrome Web Store User Data Policy, including the Limited Use requirements:
+
+- **Allowed use.** The data is used only to provide the extension’s single purpose: showing your X API usage and credit spend.
+- **Allowed transfer.** The data is not transferred to the extension author or to any third party. It stays in your browser.
+- **No advertising.** The data is never used for advertising, including personalized or interest-based ads, and is never sold.
+- **No human reading.** Nobody, including the extension’s author, reads your data. It is not used to determine creditworthiness or for lending.
+
 ## Permissions
 
 | Permission | Why |
