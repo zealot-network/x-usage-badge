@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "X API Usage Tracker",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Unofficial X API usage tracker: a toolbar badge for credit balance, cycle spend vs limit, and post reads vs cap.",
   "homepage_url": "https://github.com/zealot-network/x-usage-badge",
   "minimum_chrome_version": "111",

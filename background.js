@@ -11,7 +11,8 @@
 //   GET /api/accounts/{id}/usage?interval=30days&groupBy=requestType
 //   GET /api/credits/pricing
 //
-// Auth is the existing X session cookies on console.x.com (auth_token + ct0).
+// Auth is the existing X session cookies on console.x.com (auth_token or twid
+// to detect sign-in, ct0 for CSRF).
 // Requests send credentials: "include" and x-csrf-token from the ct0 cookie.
 
 const DEBUG = false;

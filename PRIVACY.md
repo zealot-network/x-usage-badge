@@ -12,9 +12,9 @@ The extension shows your X Developer Console usage in the Chrome toolbar and pop
 
 To fulfill that single purpose, the extension:
 
-1. **Reads your X session cookies** on `console.x.com` (notably `auth_token` for signed-in detection and `ct0` as a CSRF token) so it can call the Developer Console APIs while you are signed in. The extension does not ask you to paste a token and does not modify or store the cookie values separately.
+1. **Reads your X session cookies** on `console.x.com` (`auth_token` and `twid` to detect that you are signed in, and `ct0` as the CSRF token the console APIs require) so it can call the Developer Console APIs while you are signed in. The extension does not ask you to paste a token and does not modify or store the cookie values separately.
 2. **Requests usage and billing summary data from `console.x.com`** (the same unofficial console APIs used by the Credits and Usage pages).
-3. **Stores a local cache** of usage state (balances, spend, meters, package, reset times, last error, last refresh time) in Chrome’s `chrome.storage` on your device so the badge and popup can update without re-fetching every click.
+3. **Stores a local cache** of what it read (your developer account name and ID, package name, prepaid and free credit balances and the free-credit expiry date, billing-cycle spend and spend cap, auto-recharge threshold and status, post-read usage against its cap, 30-day usage counts and estimated cost by event type, request totals, billing-cycle start and end dates, and the time and result of the last refresh) in Chrome’s `chrome.storage` on your device so the badge and popup can update without re-fetching every click.
 
 ## What we do not do
 
@@ -31,7 +31,7 @@ Network requests go only to `https://console.x.com/*` so the extension can read 
 | Permission | Why |
 |---|---|
 | `storage` | Cache usage state locally for the badge and popup |
-| `cookies` | Detect a signed-in X session and read `ct0` for CSRF on console API calls |
+| `cookies` | Detect a signed-in X session (`auth_token`, `twid`) and read `ct0` for CSRF on console API calls |
 | `alarms` | Refresh usage on a timer (~every 3 minutes) |
 | Host: `https://console.x.com/*` | Call Developer Console usage/billing APIs |
 

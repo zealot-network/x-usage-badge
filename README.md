@@ -54,12 +54,12 @@ The extension reads the same cookie-authenticated console APIs that power the De
 - `background.js` — service worker, single source of truth. Polls every 3 minutes plus on-demand.
 - `popup.html` / `popup.js` — the UI. Light xAI-inspired chrome (off-white, not the black Claude/Cursor popups).
 
-Auth uses your existing X session cookies on `console.x.com` (`auth_token` + `ct0` CSRF). No token pasting required — just stay signed in to the console in Chrome.
+Auth uses your existing X session cookies on `console.x.com` (`auth_token` or `twid` to detect sign-in, `ct0` for CSRF). No token pasting required — just stay signed in to the console in Chrome.
 
 ## Permissions
 
 - `storage` — persists usage state between browser restarts
-- `cookies` — detects whether an X session cookie is present / reads `ct0` for CSRF
+- `cookies` — detects whether an X session cookie (`auth_token` or `twid`) is present / reads `ct0` for CSRF
 - `alarms` — periodic background refresh every 3 minutes
 - `host_permissions: ["https://console.x.com/*"]` — required to call the console APIs on your behalf
 
