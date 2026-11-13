@@ -16,6 +16,7 @@ The badge shows how close you are to trouble — typically billing-cycle spend v
 - Current spend vs spend cap with progress bar
 - Auto-recharge ON / OFF
 - Over-limit state flagged loudly
+- Badge switches to a red `$0` when credits run out, since that blocks the API
 
 **Usage analytics**
 - Summary: cycle cost, plus 30-day posts, users, requests

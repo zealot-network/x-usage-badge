@@ -153,7 +153,8 @@ function computeBadge(state) {
 
   const worst = candidates.length ? Math.max(...candidates) : 100;
   const pct = displayPct(outOfCredits && candidates.length === 0 ? 100 : worst);
-  const text = `${pct}%`;
+  // An empty balance blocks the API outright, so it outranks any percentage.
+  const text = outOfCredits ? "$0" : `${pct}%`;
 
   let color;
   if (outOfCredits || state.spend?.overLimit) color = COLOR_RED;
